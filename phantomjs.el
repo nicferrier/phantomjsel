@@ -5,7 +5,7 @@
 ;; Author: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Maintainer: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Created: 12 April 2012
-;; Version: 0.0.1
+;; Version: 0.0.3
 ;; Keywords: lisp
 
 ;; This file is NOT part of GNU Emacs.
@@ -29,7 +29,7 @@
 
 ;;; Code:
 
-(require 'cl)
+(eval-when-compile (require 'cl))
 
 (defgroup phantomjs nil
   "Customizations for phantomjs handling."
@@ -57,6 +57,7 @@ Mostly exists for calling the end process callback."
    (t
     (message "phantom unexpected status: %s" status))))
 
+;;;###autoload
 (defun phantomjs-run (name callback &rest scripts)
   (interactive)
   "Run phantomjs process with NAME.
