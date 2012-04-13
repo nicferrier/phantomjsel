@@ -14,6 +14,37 @@ phantomjs-home
 which is expanded before being used (so you can use ~ and .. and such
 like).
 
+== Using ==
+
+Here's some illustrative EmacsLisp:
+
+{{{
+(defun test-phantom-complete ()
+  (elnode-stop 8005)
+  (message "test run done"))
+
+(let (phantom-server)
+  (setq phantom-server
+        (phantomjs-server
+         'servertest 6101
+         'test-phantom-complete))
+  (sleep-for 2)
+  ;; Open a url
+  (phantomjs-open
+   phantom-server
+   "http://localhost:8005/talk/stuff/html/index.html"
+   (lambda (status arg)
+     (sleep-for 3)
+     ;; Then exit
+     (phantomjs-exit
+      arg
+      (lambda (status arg)
+        (message "plaintalk exited phantom"))))))
+}}}
+
+It's also possible to call Javascript functions inside the opened web
+page.  That will have to wait for an README.
+
 == Building the package ==
 
 Use //make// to rebuild this package:
