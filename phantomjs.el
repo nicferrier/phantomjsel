@@ -1,11 +1,10 @@
-;;; phantom.el --- handle phantomjs
+;;; phantomjs.el --- handle phantomjs  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2012  Nic Ferrier
 
 ;; Author: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Maintainer: Nic Ferrier <nferrier@ferrier.me.uk>
 ;; Created: 12 April 2012
-;; Version: 0.0.3
 ;; Keywords: lisp
 
 ;; This file is NOT part of GNU Emacs.
@@ -81,6 +80,87 @@ SCRIPTS is a list of scripts to be passed to the process."
     (process-put proc :phantomjs-end-callback callback)
     (set-process-sentinel proc 'phantomjs--sentinel)
     (puthash name proc phantomjs--proc)))
+
+(defconst phantomjs--base (file-name-directory load-file-name)
+  "The base directory for the phantomjs elisp files.")
+
+;;;###autoload
+(defun phantomjs-server (name port complete-callback)
+  (interactive)
+  "Run a phantomjs process with NAME and a webserver on PORT.
+
+COMPLETE-CALLBACK is called when it completes.
+
+The webserver running on PORT is used to send commands to the
+phantomjs instance using a special protocol.
+
+Returns the process object representing the connection to
+phantomjs."
+  ;; need to check phantomjs--proc for name clash
+  (let ((proc
+         (start-process
+          (symbol-name name)
+          (concat "* phantomjs-" (symbol-name name) " *")
+          (expand-file-name (format "%s/bin/phantomjs" phantomjs-home))
+          (expand-file-name "ghostweb.js" phantomjs--base)
+          (format "%d" port))))
+    (process-put proc :phantomjs-end-callback complete-callback)
+    (process-put proc :phantomjs-web-port port)
+    (set-process-sentinel proc 'phantomjs--sentinel)
+    (puthash name proc phantomjs--proc)
+    proc))
+
+(defun phantomjs--callback (status args)
+  (let ((http-status (save-match-data
+                       (re-search-forward "HTTP/1.1 \\([0-9]+\\) .*" nil 't)
+                       (match-string 1))))
+    (message "phantomjs callback got status %s" http-status)
+    (when (eq 200 (string-to-number http-status))
+      (funcall (car args) http-status (cadr args)))))
+
+(defun phantomjs-open (proc url callback)
+  "Open URL in PROCESS, the phantomjs instance.
+
+When the url is opened call CALLBACK in the same way as with
+`url-retrieve'."
+  (assert (process-get proc :phantomjs-web-port))
+  (let ((port (process-get proc :phantomjs-web-port))
+        (url-request-extra-headers
+         `(("command" . "open")
+           ("commandarg" . ,url))))
+    (url-retrieve
+     (format "http://localhost:%d" port)
+     'phantomjs--callback
+     (list (list callback proc)))))
+
+(defun phantomjs-call (proc javascript callback)
+  "Call JAVASCRIPT in PROCESS, the phantomjs instance.
+
+When the Javascript completes call CALLBACK in the same way as
+with `url-retrieve'."
+  (assert (process-get proc :phantomjs-web-port))
+  (let ((port (process-get proc :phantomjs-web-port))
+        (url-request-extra-headers
+         `(("command" . "call")
+           ("commandarg" . ,javascript))))
+    (url-retrieve
+     (format "http://localhost:%d" port)
+     'phantomjs--callback
+     (list (list callback proc)))))
+
+(defun phantomjs-exit (proc callback)
+  "Make PROCESS, the phantomjs instance, exit.
+
+When the exit is acknowledged call CALLBACK in the same way as
+with `url-retrieve'."
+  (assert (process-get proc :phantomjs-web-port))
+  (let ((port (process-get proc :phantomjs-web-port))
+        (url-request-extra-headers
+         `(("command" . "exit"))))
+    (url-retrieve
+     (format "http://localhost:%d" port)
+     'phantomjs--callback
+     (list (list callback proc)))))
 
 (provide 'phantomjs)
 
