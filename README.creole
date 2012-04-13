@@ -1,1 +1,31 @@
 Stuff for working with phantomjs from within Emacs.
+
+== Dependancies ==
+
+This package requires [[http://phantomjs.org/|phantomjs]] v1.5 to be
+installed.  This package does no checking (yet) for that dependancy.
+
+The location of phantomjs can be controlled with the customizaton variable:
+
+{{{
+phantomjs-home
+}}}
+
+which is expanded before being used (so you can use ~ and .. and such
+like).
+
+== Building the package ==
+
+Use //make// to rebuild this package:
+
+{{{
+make clean all
+}}}
+
+will produce the appropriately versioned phantomjs tar file which can
+then be installed (locally) with:
+
+{{{
+M-x package-install-file
+}}}
+
