@@ -171,7 +171,7 @@ If CALLBACK is specified and a function then, when the url is
 opened call CALLBACK in the same way as with `url-retrieve'.
 
 If the CALLBACK is not specified then attempt to wait on a signal
-from the process."
+from the process (blocking style)."
   (assert (process-get proc :phantomjs-web-port))
   (let ((port (process-get proc :phantomjs-web-port))
         (url-request-extra-headers
@@ -195,7 +195,10 @@ from the process."
   "Call JAVASCRIPT in PROCESS, the phantomjs instance.
 
 When the Javascript completes call CALLBACK in the same way as
-with `url-retrieve'."
+with `url-retrieve'.
+
+If the CALLBACK is not specified then attempt to wait on a signal
+from the process (blocking style)."
   (assert (process-get proc :phantomjs-web-port))
   (let ((port (process-get proc :phantomjs-web-port))
         (url-request-extra-headers
@@ -219,7 +222,10 @@ with `url-retrieve'."
   "Make PROCESS, the phantomjs instance, exit.
 
 When the exit is acknowledged call CALLBACK in the same way as
-with `url-retrieve'."
+with `url-retrieve'.
+
+If the CALLBACK is not specified then attempt to wait on a signal
+from the process (blocking style)."
   (assert (process-get proc :phantomjs-web-port))
   (let ((port (process-get proc :phantomjs-web-port))
         (url-request-extra-headers
