@@ -3,7 +3,7 @@ Stuff for working with phantomjs from within Emacs.
 == Dependancies ==
 
 This package requires [[http://phantomjs.org/|phantomjs]] v1.5 to be
-installed.  This package does no checking (yet) for that dependancy.
+installed.  This Emacs package does only cursory checking for that dependancy.
 
 The location of phantomjs can be controlled with the customizaton variable:
 
