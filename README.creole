@@ -43,7 +43,41 @@ Here's some illustrative EmacsLisp:
 }}}
 
 It's also possible to call Javascript functions inside the opened web
-page.  That will have to wait for an README.
+page:
+
+{{{
+(phantomjs-open
+  phantom-server
+  "http://localhost:8005/talk/stuff/html/index.html"
+ (lambda (status server-proc)
+   (sleep-for 3)
+   (phantomjs-call 
+     server-proc
+     "window.location.hostname"
+     (lambda (status server-proc)
+      (phantomjs-exit
+        server-proc
+        (lambda (status server-proc)
+           (message "plaintalk exited phantom")))))))
+}}}
+
+=== Synchronous style ===
+
+I have also implemented a synchronous style, basically it just uses an
+automatic semaphore with the async style, it makes the code easier to
+write though:
+
+{{{
+(phantomjs-open
+  server
+  (concat "file://"
+          (expand-file-name "test.html" phantomjs--base)))
+(phantomjs-call server "document.getElementById('title').id")
+(phantomjs-call server "document.getElementById('subtitle').id")
+(phantomjs-exit server)
+;; Manually wait... you shouldn't need this call
+(phantomjs--wait-for server t)
+}}}
 
 == Building the package ==
 
