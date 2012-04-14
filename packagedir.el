@@ -7,5 +7,7 @@
             load-file-name
             default-directory))
        ".elpa"))
+(load-file "build.el")
+(ert-run-tests-batch-and-exit)
 
 ;; End
