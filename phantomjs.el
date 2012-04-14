@@ -43,6 +43,9 @@
   (make-hash-table)
   "Hash of name->process object.")
 
+(eval-after-load 'phantomjs
+  (assert (file-exists-p (expand-file-name phantomjs-home))))
+
 (defun phantomjs--sentinel (proc status)
   "The sentinel for the phantomjs stuff.
 
