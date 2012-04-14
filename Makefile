@@ -2,7 +2,7 @@
 
 # These are the variables that are specific to the package
 NAME=phantomjs
-VERSION=0.0.8
+VERSION=0.0.9
 DOC="Control phantomjs from Emacs"			
 package_parts = phantomjs.el phantomjs-pkg.el ghostweb.js test.html
 
