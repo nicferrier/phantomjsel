@@ -14,6 +14,11 @@ phantomjs-home
 which is expanded before being used (so you can use ~ and .. and such
 like).
 
+== Installing ==
+
+You can install this package from
+[[http://marmalade-repo.org|Marmalade]] in the usual way.
+
 == Using ==
 
 Here's some illustrative EmacsLisp:
@@ -81,7 +86,7 @@ write though:
 
 == Building the package ==
 
-Use //make// to rebuild this package:
+To build the package yourself, use //make//:
 
 {{{
 make clean all
@@ -94,3 +99,10 @@ then be installed (locally) with:
 M-x package-install-file
 }}}
 
+Alternately:
+
+{{{
+make install
+}}}
+
+will compile and install the package.
