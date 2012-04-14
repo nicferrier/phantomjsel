@@ -125,6 +125,7 @@ try {
       response.close();
     }
   });
+  console.log("server: started");
 }
 catch (e) {
   console.log(e);
