@@ -107,34 +107,88 @@ phantomjs."
           (format "%d" port))))
     (process-put proc :phantomjs-end-callback complete-callback)
     (process-put proc :phantomjs-web-port port)
+    (process-put proc :phantomjs-lock nil)
     (set-process-sentinel proc 'phantomjs--sentinel)
     (puthash name proc phantomjs--proc)
     proc))
 
+(defcustom phantomjs-callback-debug t
+  "Whether phantomjs web server callbacks should do debug messages or not.
+
+The messages go to *Messages*."
+  :group 'phantomjs
+  :type '(boolean))
+
 (defun phantomjs--callback (status args)
-  (let ((http-status (save-match-data
+  (let (proc
+        (http-status (save-match-data
                        (re-search-forward "HTTP/1.1 \\([0-9]+\\) .*" nil 't)
                        (match-string 1))))
-    (message "phantomjs callback got status %s" http-status)
+    (when phantomjs-callback-debug
+      (message "phantomjs--callback got status %s" http-status))
     (when (eq 200 (string-to-number http-status))
-      (funcall (car args) http-status (cadr args)))))
+      (cond
+       ((listp args)
+        ;; The callback is for a specific user supplied callback.
+        (setq proc (cadr args))
+        (funcall (car args) http-status proc))
+       ((processp args)
+        (setq proc args))
+       (t
+        (when phantomjs-callback-debug
+          (message "phantomjs--callback unknown callback type"))))
+      ;; Unset the lock
+      (when proc
+        (when phantomjs-callback-debug
+          (message "phantomjs--callback releasing the lock"))
+        (process-put proc :phantomjs-lock nil)
+        (when phantomjs-callback-debug
+          (message "phantomjs--callback released the lock: %s %s"
+                   (process-get proc :phantomjs-lock)
+                   proc))))))
 
-(defun phantomjs-open (proc url callback)
+(defun phantomjs--wait-for (proc &optional no-grab)
+  "Wait for lock on PROC to turn off, then immediately set it.
+
+We set it on behalf of the caller, who is waiting to obtain the
+lock.
+
+With optional NO-GRAB don't take the lock."
+  (while (process-get proc :phantomjs-lock)
+    ;; (message "phantomjs--wait-for waiting for lock %s" proc)
+    (sit-for 0.5))
+  ;; (message "phantomjs--wait-lock released")
+  (unless no-grab
+    (process-put proc :phantomjs-lock t)))
+
+(defun phantomjs-open (proc url &optional callback)
   "Open URL in PROCESS, the phantomjs instance.
 
-When the url is opened call CALLBACK in the same way as with
-`url-retrieve'."
+If CALLBACK is specified and a function then, when the url is
+opened call CALLBACK in the same way as with `url-retrieve'.
+
+If the CALLBACK is not specified then attempt to wait on a signal
+from the process."
   (assert (process-get proc :phantomjs-web-port))
   (let ((port (process-get proc :phantomjs-web-port))
         (url-request-extra-headers
          `(("command" . "open")
            ("commandarg" . ,url))))
-    (url-retrieve
-     (format "http://localhost:%d" port)
-     'phantomjs--callback
-     (list (list callback proc)))))
+    (cond
+     ((functionp callback)
+      (url-retrieve
+       (format "http://localhost:%d" port)
+       'phantomjs--callback
+       (list (list callback proc))))
+     (t
+      (phantomjs--wait-for proc)
+      ;; (message "phantomjs-open got lock %s" proc)
+      (url-retrieve
+       (format "http://localhost:%d" port)
+       'phantomjs--callback
+       (list proc))))))
 
-(defun phantomjs-call (proc javascript callback)
+(defun phantomjs-call (proc javascript &optional callback)
   "Call JAVASCRIPT in PROCESS, the phantomjs instance.
 
 When the Javascript completes call CALLBACK in the same way as
@@ -144,12 +198,21 @@ with `url-retrieve'."
         (url-request-extra-headers
          `(("command" . "call")
            ("commandarg" . ,javascript))))
-    (url-retrieve
-     (format "http://localhost:%d" port)
-     'phantomjs--callback
-     (list (list callback proc)))))
+    (cond
+     ((functionp callback)
+      (url-retrieve
+       (format "http://localhost:%d" port)
+       'phantomjs--callback
+       (list (list callback proc))))
+     (t
+      ;; (message "phantomjs-call waiting for lock %s" proc)
+      (phantomjs--wait-for proc)
+      (url-retrieve
+       (format "http://localhost:%d" port)
+       'phantomjs--callback
+       (list proc))))))
 
-(defun phantomjs-exit (proc callback)
+(defun phantomjs-exit (proc &optional callback)
   "Make PROCESS, the phantomjs instance, exit.
 
 When the exit is acknowledged call CALLBACK in the same way as
@@ -158,10 +221,56 @@ with `url-retrieve'."
   (let ((port (process-get proc :phantomjs-web-port))
         (url-request-extra-headers
          `(("command" . "exit"))))
-    (url-retrieve
-     (format "http://localhost:%d" port)
-     'phantomjs--callback
-     (list (list callback proc)))))
+    (cond
+     ((functionp callback)
+      (url-retrieve
+       (format "http://localhost:%d" port)
+       'phantomjs--callback
+       (list (list callback proc))))
+     (t
+      ;; (message "phantomjs-exit waiting for lock %s" proc)
+      (phantomjs--wait-for proc)
+      (url-retrieve
+       (format "http://localhost:%d" port)
+       'phantomjs--callback
+       (list proc))))))
+
+(ert-deftest phantomjs-server ()
+  "Test running a server.
+
+This test is a little dangerous, there is a lot of waiting in it.
+It may get stuck... you can always ctrl-G your way out of it."
+  (let (finished
+        blocking
+        recorded-lock
+        (server (phantomjs-server 'test 5100
+                                  (lambda ()
+                                    (setq finished t)))))
+    (sleep-for 10)
+    (should-not (process-get server :phantomjs-lock))
+    (phantomjs-open
+     server
+     (concat "file://"
+             (expand-file-name "test.html" phantomjs--base)))
+    (should (process-get server :phantomjs-lock))
+    ;; Do it the blocking way, this library does the blocking
+    (phantomjs-call server "document.getElementById('title').id")
+    (should (process-get server :phantomjs-lock))
+    ;; Wait for the lock but don't take it
+    (phantomjs--wait-for server t)
+    (should-not (process-get server :phantomjs-lock))
+    ;; A sequence of two blocking calls
+    (phantomjs-call server "document.getElementById('title').id")
+    (phantomjs-call server "document.getElementById('subtitle').id")
+    ;; Wait for the lock but don't take it
+    (phantomjs--wait-for server t)
+    (should-not (process-get server :phantomjs-lock))
+    (phantomjs-exit server)
+    (should (process-get server :phantomjs-lock))
+    (phantomjs--wait-for server t)
+    (should-not (process-get server :phantomjs-lock))
+    ;; we should test `finished' here
+    ))
 
 (provide 'phantomjs)
 

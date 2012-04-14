@@ -1,18 +1,22 @@
 # package.el multi-file package install 
 
+# These are the variables that are specific to the package
 NAME=phantomjs
 VERSION=0.0.8
+DOC="Control phantomjs from Emacs"			
+package_parts = phantomjs.el phantomjs-pkg.el ghostweb.js test.html
+
+
+# Everything beyond here should be generic
 PACKAGE=$(NAME)-$(VERSION)
 TARBALL=$(PACKAGE).tar 
-DOC="Control phantomjs from Emacs"			
-package_parts = phantomjs.el phantomjs-pkg.el ghostweb.js
 
 all: tarball
 
 
 # Install the tarball in a test package store
 test: tarball
-	emacs -Q --batch -l ./packagedir.el -l ./build.el -- $(TARBALL)
+	emacs -Q --batch -l ./packagedir.el -- $(TARBALL)
 
 # Install the tarball in the user's emacs
 install: tarball
