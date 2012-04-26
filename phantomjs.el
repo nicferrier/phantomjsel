@@ -84,8 +84,7 @@ SCRIPTS is a list of scripts to be passed to the process."
     (set-process-sentinel proc 'phantomjs--sentinel)
     (puthash name proc phantomjs--proc)))
 
-(defconst phantomjs--base (file-name-directory (or (buffer-file-name)
-                                                   load-file-name))
+(defconst phantomjs--base (file-name-directory load-file-name)
   "The base directory for the phantomjs elisp files.")
 
 ;;;###autoload
