@@ -84,8 +84,15 @@ SCRIPTS is a list of scripts to be passed to the process."
     (set-process-sentinel proc 'phantomjs--sentinel)
     (puthash name proc phantomjs--proc)))
 
-(defconst phantomjs--base (file-name-directory load-file-name)
+(defconst phantomjs--base
+  (file-name-directory (or load-file-name buffer-file-name))
   "The base directory for the phantomjs elisp files.")
+
+(defconst phantomjs--config (concat phantomjs--base "config.js")
+  "The path to the phantom config file.
+
+A default is included in the package but you could `let' bind
+this to override it if necessary.")
 
 ;;;###autoload
 (defun phantomjs-server (name port complete-callback)
@@ -100,13 +107,18 @@ phantomjs instance using a special protocol.
 Returns the process object representing the connection to
 phantomjs."
   ;; need to check phantomjs--proc for name clash
-  (let ((proc
-         (start-process
-          (symbol-name name)
-          (concat "* phantomjs-" (symbol-name name) " *")
-          (expand-file-name (format "%s/bin/phantomjs" phantomjs-home))
-          (expand-file-name "ghostweb.js" phantomjs--base)
-          (format "%d" port))))
+  (let* ((server-start-args
+          (list
+           (symbol-name name)
+           (concat "* phantomjs-" (symbol-name name) " *")
+           (expand-file-name (format "%s/bin/phantomjs" phantomjs-home))
+           (format "--config=%s"
+                   (expand-file-name phantomjs--config))
+           (expand-file-name "ghostweb.js" phantomjs--base)
+           (format "%d" port)))
+         (proc
+          (apply 'start-process server-start-args)))
+    (message "phantomjs server start args %s" server-start-args)
     (process-put proc :phantomjs-end-callback complete-callback)
     (process-put proc :phantomjs-web-port port)
     (process-put proc :phantomjs-lock nil)

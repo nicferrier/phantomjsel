@@ -2,9 +2,9 @@
 
 # These are the variables that are specific to the package
 NAME=phantomjs
-VERSION=0.0.10
+VERSION=0.0.11
 DOC="Control phantomjs from Emacs"			
-package_parts = phantomjs.el phantomjs-pkg.el ghostweb.js test.html
+package_parts = phantomjs.el phantomjs-pkg.el ghostweb.js test.html config.js
 
 
 # Everything beyond here should be generic
