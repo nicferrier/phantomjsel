@@ -54,6 +54,7 @@ Mostly exists for calling the end process callback."
    ((member status '("finished\n"
                      "killed\n"
                      "exited abnormally with code 255\n"))
+    (message "phantomjs got finished signal")
     (when (functionp (process-get proc :phantomjs-end-callback))
       (funcall (process-get proc :phantomjs-end-callback))))
    (t
@@ -140,7 +141,7 @@ The messages go to *Messages*."
                        (match-string 1))))
     (when phantomjs-callback-debug
       (message "phantomjs--callback got status %s" http-status))
-    (when (eq 200 (string-to-number http-status))
+    (when (string-to-number http-status)
       (cond
        ((listp args)
         ;; The callback is for a specific user supplied callback.
