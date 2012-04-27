@@ -103,6 +103,7 @@ try {
       var retval = page.evaluate(f);
 
       if (retval["type"] == 'error') {
+        console.log("server: call error " + request.headers.commandarg + " => " + retval.name + ":" + retval.message);
         response.statusCode = 400;
         response.write(retval.name + ":" + retval.message + "\n");
       }
