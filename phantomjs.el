@@ -28,6 +28,8 @@
 
 ;;; Code:
 
+(require 'url)
+
 (eval-when-compile (require 'cl))
 
 (defgroup phantomjs nil
@@ -249,6 +251,10 @@ with `url-retrieve'."
        (format "http://localhost:%d" port)
        'phantomjs--callback
        (list proc))))))
+
+;; Test
+
+(eval-when-compile (require 'ert))
 
 (ert-deftest phantomjs-server ()
   "Test running a server.
